@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Primal fear</title>
+    <!-- We are loading the Supabase cloud script here -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -19,7 +21,6 @@
             letter-spacing: 1px;
             margin-bottom: 30px;
         }
-        /* Input Form */
         .input-area {
             background-color: #262626;
             padding: 20px;
@@ -42,14 +43,8 @@
             border: none;
             font-size: 1rem;
         }
-        input {
-            background-color: #333;
-            color: white;
-        }
-        select {
-            background-color: #333;
-            color: white;
-        }
+        input { background-color: #333; color: white; }
+        select { background-color: #333; color: white; }
         button {
             background-color: #ff4a5a;
             color: white;
@@ -57,10 +52,7 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        button:hover {
-            background-color: #e03e4d;
-        }
-        /* Big Category Headers */
+        button:hover { background-color: #e03e4d; }
         .category-block {
             background-color: #1f1f1f;
             padding: 20px;
@@ -75,7 +67,6 @@
             border-bottom: 1px solid #333;
             padding-bottom: 8px;
         }
-        /* Sub-list headers */
         h3 {
             color: #aaa;
             font-size: 1rem;
@@ -84,11 +75,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
+        ul { list-style-type: none; padding: 0; margin: 0; }
         li {
             background-color: #2a2a2a;
             margin: 6px 0;
@@ -98,33 +85,17 @@
             justify-content: space-between;
             align-items: center;
         }
-        .action-btns {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .action-btns { display: flex; align-items: center; gap: 12px; }
         .move-btn {
             background-color: #333;
             color: #ff4a5a;
             padding: 4px 10px;
             font-size: 0.85rem;
             border-radius: 4px;
-            transition: all 0.2s;
         }
-        .move-btn:hover {
-            background-color: #ff4a5a;
-            color: white;
-        }
-        .delete-btn {
-            background: none;
-            color: #666;
-            padding: 0 5px;
-            font-size: 0.9em;
-        }
-        .delete-btn:hover {
-            color: #ff4a5a;
-            background: none;
-        }
+        .move-btn:hover { background-color: #ff4a5a; color: white; }
+        .delete-btn { background: none; color: #666; padding: 0 5px; font-size: 0.9em; }
+        .delete-btn:hover { color: #ff4a5a; background: none; }
     </style>
 </head>
 <body>
@@ -133,53 +104,56 @@
     
     <div class="input-area">
         <input type="text" id="mediaTitle" placeholder="Type name here...">
-        
         <div class="row">
             <select id="mediaType" onchange="updateStatusOptions()">
                 <option value="movie">🎬 Movie</option>
                 <option value="serial">📺 Serial</option>
             </select>
-
             <select id="mediaStatus">
                 <option value="watchlist">⏳ Want to Watch</option>
                 <option value="watched">✅ Watched & Completed</option>
             </select>
         </div>
-        
         <button onclick="addMedia()">Add to Log</button>
     </div>
 
+    <!-- MOVIES SECTION -->
     <div class="category-block">
         <h2 class="category-title">🎬 Movies</h2>
-        
         <h3>⏳ Watchlist</h3>
         <ul id="movie-watchlist"></ul>
-
         <h3>✅ Watched & Completed</h3>
         <ul id="movie-watched"></ul>
     </div>
 
+    <!-- SERIALS SECTION -->
     <div class="category-block">
         <h2 class="category-title">📺 Serials & TV Shows</h2>
-        
         <h3>🍿 Currently Watching</h3>
         <ul id="serial-watching"></ul>
-
         <h3>⏳ Watchlist</h3>
         <ul id="serial-watchlist"></ul>
-
         <h3>✅ Watched & Completed</h3>
         <ul id="serial-watched"></ul>
     </div>
 
     <script>
-        let myMediaList = JSON.parse(localStorage.getItem('myMedia')) || [];
-        displayList();
+        // =========================================================
+        // STEP 2.1: LINK YOUR DATABASE HERE!
+        // Replace the placeholders below with your actual keys from Supabase
+        // =========================================================
+        const SUPABASE_URL = "https://liqqdromclsdhlgpasao.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_2l0Bfembiw0shrvgih64hw_DsvjbkdD";
+        
+        // Connect our code to the Supabase library
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Load the list directly from the internet cloud when opened
+        fetchMediaList();
 
         function updateStatusOptions() {
             const type = document.getElementById('mediaType').value;
             const statusDropdown = document.getElementById('mediaStatus');
-            
             if (type === 'movie') {
                 statusDropdown.innerHTML = `
                     <option value="watchlist">⏳ Want to Watch</option>
@@ -194,7 +168,21 @@
             }
         }
 
-        function addMedia() {
+        // Fetch the active data array from the cloud database
+        async function fetchMediaList() {
+            let { data: watchlist, error } = await supabase
+                .from('watchlist')
+                .select('*');
+
+            if (error) {
+                console.error("Error loading data:", error);
+            } else {
+                displayList(watchlist || []);
+            }
+        }
+
+        // Add item to cloud
+        async function addMedia() {
             const titleInput = document.getElementById('mediaTitle');
             const typeInput = document.getElementById('mediaType');
             const statusInput = document.getElementById('mediaStatus');
@@ -204,57 +192,66 @@
                 return;
             }
 
-            const newMedia = {
-                id: Date.now(),
-                title: titleInput.value,
-                type: typeInput.value,
-                status: statusInput.value
-            };
+            const { error } = await supabase
+                .from('watchlist')
+                .insert([
+                    { title: titleInput.value, type: typeInput.value, status: statusInput.value }
+                ]);
 
-            myMediaList.push(newMedia);
-            localStorage.setItem('myMedia', JSON.stringify(myMediaList));
-            titleInput.value = "";
-            
-            displayList();
+            if (error) {
+                alert("Error adding item to cloud.");
+            } else {
+                titleInput.value = "";
+                fetchMediaList(); // Refresh data from cloud
+            }
         }
 
-        // NEW APP FEATURE: Advance item status automatically
-        function moveNext(id) {
-            myMediaList = myMediaList.map(item => {
-                if (item.id === id) {
-                    if (item.status === 'watchlist' && item.type === 'serial') {
-                        item.status = 'watching'; // Watchlist serials move to Currently Watching
-                    } else {
-                        item.status = 'watched'; // Everything else moves straight to Completed
-                    }
-                }
-                return item;
-            });
-            localStorage.setItem('myMedia', JSON.stringify(myMediaList));
-            displayList();
+        // Advance item status on the cloud
+        async function moveNext(id, currentStatus, type) {
+            let nextStatus = 'watched';
+            if (currentStatus === 'watchlist' && type === 'serial') {
+                nextStatus = 'watching';
+            }
+
+            const { error } = await supabase
+                .from('watchlist')
+                .update({ status: nextStatus })
+                .eq('id', id);
+
+            if (error) {
+                alert("Error updating item.");
+            } else {
+                fetchMediaList();
+            }
         }
 
-        function deleteMedia(id) {
-            myMediaList = myMediaList.filter(item => item.id !== id);
-            localStorage.setItem('myMedia', JSON.stringify(myMediaList));
-            displayList();
+        // Remove item from cloud
+        async function deleteMedia(id) {
+            const { error } = await supabase
+                .from('watchlist')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert("Error deleting item.");
+            } else {
+                fetchMediaList();
+            }
         }
 
-        function displayList() {
+        function displayList(mediaList) {
             document.getElementById('movie-watchlist').innerHTML = "";
             document.getElementById('movie-watched').innerHTML = "";
             document.getElementById('serial-watching').innerHTML = "";
             document.getElementById('serial-watchlist').innerHTML = "";
             document.getElementById('serial-watched').innerHTML = "";
 
-            myMediaList.forEach(item => {
+            mediaList.forEach(item => {
                 const li = document.createElement('li');
-                
-                // Only show a progression button if the item isn't already completed
                 let moveButtonHtml = '';
                 if (item.status !== 'watched') {
                     let nextLabel = item.status === 'watchlist' && item.type === 'serial' ? 'Start Watching →' : 'Completed →';
-                    moveButtonHtml = `<button class="move-btn" onclick="moveNext(${item.id})">${nextLabel}</button>`;
+                    moveButtonHtml = `<button class="move-btn" onclick="moveNext(${item.id}, '${item.status}', '${item.type}')">${nextLabel}</button>`;
                 }
 
                 li.innerHTML = `
