@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Primal fear</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h1 {
+            color: #ffffff;
+            border-bottom: 2px solid #ff4a5a;
+            padding-bottom: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+        /* Input Form */
+        .input-area {
+            background-color: #262626;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+        .row select, .row input {
+            flex: 1;
+        }
+        input, select, button {
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 1rem;
+        }
+        input {
+            background-color: #333;
+            color: white;
+        }
+        select {
+            background-color: #333;
+            color: white;
+        }
+        button {
+            background-color: #ff4a5a;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #e03e4d;
+        }
+        /* Big Category Headers */
+        .category-block {
+            background-color: #1f1f1f;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #ff4a5a;
+        }
+        .category-title {
+            color: #fff;
+            margin-top: 0;
+            font-size: 1.5rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        /* Sub-list headers */
+        h3 {
+            color: #aaa;
+            font-size: 1rem;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            background-color: #2a2a2a;
+            margin: 6px 0;
+            padding: 10px 14px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .action-btns {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .move-btn {
+            background-color: #333;
+            color: #ff4a5a;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .move-btn:hover {
+            background-color: #ff4a5a;
+            color: white;
+        }
+        .delete-btn {
+            background: none;
+            color: #666;
+            padding: 0 5px;
+            font-size: 0.9em;
+        }
+        .delete-btn:hover {
+            color: #ff4a5a;
+            background: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎬 Primal fear</h1>
+    
+    <div class="input-area">
+        <input type="text" id="mediaTitle" placeholder="Type name here...">
+        
+        <div class="row">
+            <select id="mediaType" onchange="updateStatusOptions()">
+                <option value="movie">🎬 Movie</option>
+                <option value="serial">📺 Serial</option>
+            </select>
+
+            <select id="mediaStatus">
+                <option value="watchlist">⏳ Want to Watch</option>
+                <option value="watched">✅ Watched & Completed</option>
+            </select>
+        </div>
+        
+        <button onclick="addMedia()">Add to Log</button>
+    </div>
+
+    <div class="category-block">
+        <h2 class="category-title">🎬 Movies</h2>
+        
+        <h3>⏳ Watchlist</h3>
+        <ul id="movie-watchlist"></ul>
+
+        <h3>✅ Watched & Completed</h3>
+        <ul id="movie-watched"></ul>
+    </div>
+
+    <div class="category-block">
+        <h2 class="category-title">📺 Serials & TV Shows</h2>
+        
+        <h3>🍿 Currently Watching</h3>
+        <ul id="serial-watching"></ul>
+
+        <h3>⏳ Watchlist</h3>
+        <ul id="serial-watchlist"></ul>
+
+        <h3>✅ Watched & Completed</h3>
+        <ul id="serial-watched"></ul>
+    </div>
+
+    <script>
+        let myMediaList = JSON.parse(localStorage.getItem('myMedia')) || [];
+        displayList();
+
+        function updateStatusOptions() {
+            const type = document.getElementById('mediaType').value;
+            const statusDropdown = document.getElementById('mediaStatus');
+            
+            if (type === 'movie') {
+                statusDropdown.innerHTML = `
+                    <option value="watchlist">⏳ Want to Watch</option>
+                    <option value="watched">✅ Watched & Completed</option>
+                `;
+            } else {
+                statusDropdown.innerHTML = `
+                    <option value="watching">🍿 Currently Watching</option>
+                    <option value="watchlist">⏳ Want to Watch</option>
+                    <option value="watched">✅ Watched & Completed</option>
+                `;
+            }
+        }
+
+        function addMedia() {
+            const titleInput = document.getElementById('mediaTitle');
+            const typeInput = document.getElementById('mediaType');
+            const statusInput = document.getElementById('mediaStatus');
+
+            if (titleInput.value.trim() === "") {
+                alert("Please type a title first!");
+                return;
+            }
+
+            const newMedia = {
+                id: Date.now(),
+                title: titleInput.value,
+                type: typeInput.value,
+                status: statusInput.value
+            };
+
+            myMediaList.push(newMedia);
+            localStorage.setItem('myMedia', JSON.stringify(myMediaList));
+            titleInput.value = "";
+            
+            displayList();
+        }
+
+        // NEW APP FEATURE: Advance item status automatically
+        function moveNext(id) {
+            myMediaList = myMediaList.map(item => {
+                if (item.id === id) {
+                    if (item.status === 'watchlist' && item.type === 'serial') {
+                        item.status = 'watching'; // Watchlist serials move to Currently Watching
+                    } else {
+                        item.status = 'watched'; // Everything else moves straight to Completed
+                    }
+                }
+                return item;
+            });
+            localStorage.setItem('myMedia', JSON.stringify(myMediaList));
+            displayList();
+        }
+
+        function deleteMedia(id) {
+            myMediaList = myMediaList.filter(item => item.id !== id);
+            localStorage.setItem('myMedia', JSON.stringify(myMediaList));
+            displayList();
+        }
+
+        function displayList() {
+            document.getElementById('movie-watchlist').innerHTML = "";
+            document.getElementById('movie-watched').innerHTML = "";
+            document.getElementById('serial-watching').innerHTML = "";
+            document.getElementById('serial-watchlist').innerHTML = "";
+            document.getElementById('serial-watched').innerHTML = "";
+
+            myMediaList.forEach(item => {
+                const li = document.createElement('li');
+                
+                // Only show a progression button if the item isn't already completed
+                let moveButtonHtml = '';
+                if (item.status !== 'watched') {
+                    let nextLabel = item.status === 'watchlist' && item.type === 'serial' ? 'Start Watching →' : 'Completed →';
+                    moveButtonHtml = `<button class="move-btn" onclick="moveNext(${item.id})">${nextLabel}</button>`;
+                }
+
+                li.innerHTML = `
+                    <span><strong>${item.title}</strong></span>
+                    <div class="action-btns">
+                        ${moveButtonHtml}
+                        <button class="delete-btn" onclick="deleteMedia(${item.id})">✕</button>
+                    </div>
+                `;
+                
+                const listId = `${item.type}-${item.status}`;
+                const targetList = document.getElementById(listId);
+                if (targetList) {
+                    targetList.appendChild(li);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
