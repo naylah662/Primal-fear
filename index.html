@@ -13,7 +13,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #1a1a1a;
             color: #e0e0e0;
-            max-width: 650px;
+            max-width: 750px;
             margin: 0 auto;
             padding: 40px 20px;
         }
@@ -28,7 +28,7 @@
             background-color: #262626;
             padding: 20px;
             border-radius: 8px;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -63,6 +63,14 @@
         button:hover {
             background-color: #e03e4d;
         }
+        .btn-random {
+            background-color: #5c5cff;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+        .btn-random:hover {
+            background-color: #4747d1;
+        }
         .category-block {
             margin-bottom: 35px;
         }
@@ -95,7 +103,28 @@
         }
         .item-text {
             font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
+        .item-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-masterpiece { background-color: #ffcc00; color: #111; }
+        .badge-dropped { background-color: #ff3b30; color: #fff; }
+        .badge-rewatched { background-color: #34c759; color: #fff; }
+        .stars { color: #ffcc00; font-size: 0.9rem; }
+        
         .actions {
             display: flex;
             gap: 8px;
@@ -122,11 +151,36 @@
             font-style: italic;
             padding-left: 10px;
         }
+        
+        /* Interactive Analytics Engine Layout */
+        .dashboard-addon {
+            background-color: #222;
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 40px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .addon-card {
+            background-color: #2c2c2c;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .stat-highlight {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff4a5a;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Header updated to exact casing -->
     <h1>Primal Fear</h1>
 
     <!-- Inputs to log a new show -->
@@ -142,8 +196,30 @@
                 <option value="watched">✅ Watched & Completed</option>
             </select>
         </div>
+        
+        <!-- Expanded Status Flags & Ratings Rows -->
+        <div class="row">
+            <select id="mediaFlag">
+                <option value="">✨ No Special Flag</option>
+                <option value="masterpiece">👑 Masterpiece</option>
+                <option value="rewatched">🔄 Rewatched</option>
+                <option value="dropped">❌ Dropped midway</option>
+            </select>
+            <select id="mediaRating">
+                <option value="">⭐ No Rating Given</option>
+                <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                <option value="4">⭐⭐⭐⭐ (4/5)</option>
+                <option value="3">⭐⭐⭐ (3/5)</option>
+                <option value="2">⭐⭐ (2/5)</option>
+                <option value="1">⭐ (1/5)</option>
+            </select>
+        </div>
+        
         <button onclick="addMedia()">Add to Log</button>
     </div>
+
+    <!-- Randomizer button strictly for Movies -->
+    <button class="btn-random" onclick="surpriseMeMovie()">🍿 Surprise Me (Pick Random Watchlist Movie)</button>
 
     <!-- Container for displaying columns -->
     <h2>🎬 Movies</h2>
@@ -167,6 +243,24 @@
         <ul id="serial-watched"></ul>
     </div>
 
+    <!-- Live Automated Analytics Dashboard -->
+    <div class="dashboard-addon">
+        <h2 style="margin-top:0; border-color: #5c5cff;">📊 Analytics & Smart Recommendations</h2>
+        <div class="dashboard-grid">
+            <div class="addon-card">
+                <h4 style="margin:0 0 5px 0; color:#5c5cff;">👑 Comfort Replays & Masterpieces</h4>
+                <div class="stat-highlight" id="stat-masterpieces">0</div>
+                <p style="font-size:0.85rem; color:#aaa; margin:0;">Total top-tier titles and comfort replays cataloged in your active schema.</p>
+            </div>
+            <div class="addon-card">
+                <h4 style="margin:0 0 5px 0; color:#5c5cff;">🧠 Smart Recommendations</h4>
+                <div id="rec-box" style="font-size:0.9rem; color:#eee; font-style:italic; margin-top:5px;">
+                    Log a 5-star Masterpiece to trigger recommendation mapping!
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
         // CONNECT TO YOUR SUPABASE CLOUD DATABASE
@@ -176,10 +270,11 @@
         
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let localWatchlistCache = [];
+
         // Fetch data immediately when the app loads
         fetchMediaList();
 
-        // Adjust dropdown selection modes instantly based on Movie vs Serial
         function updateStatusOptions() {
             const type = document.getElementById('mediaType').value;
             const statusDropdown = document.getElementById('mediaStatus');
@@ -198,7 +293,6 @@
             }
         }
 
-        // Pull saved data array from cloud
         async function fetchMediaList() {
             let { data: watchlist, error } = await db
                 .from('Watchlist')
@@ -207,15 +301,18 @@
             if (error) {
                 console.error("Error loading cloud data:", error);
             } else {
-                displayList(watchlist || []);
+                localWatchlistCache = watchlist || [];
+                displayList(localWatchlistCache);
+                calculateAnalytics(localWatchlistCache);
             }
         }
 
-        // Add item to cloud
         async function addMedia() {
             const titleInput = document.getElementById('mediaTitle');
             const typeInput = document.getElementById('mediaType');
             const statusInput = document.getElementById('mediaStatus');
+            const flagInput = document.getElementById('mediaFlag');
+            const ratingInput = document.getElementById('mediaRating');
 
             if (titleInput.value.trim() === "") {
                 alert("Please type a title first!");
@@ -225,7 +322,13 @@
             const { error } = await db
                 .from('Watchlist')
                 .insert([
-                    { Title: titleInput.value.trim(), Type: typeInput.value, Status: statusInput.value }
+                    { 
+                        Title: titleInput.value.trim(), 
+                        Type: typeInput.value, 
+                        Status: statusInput.value,
+                        Flag: flagInput.value || null,
+                        Rating: ratingInput.value || null
+                    }
                 ]);
 
             if (error) {
@@ -233,11 +336,12 @@
                 console.error(error);
             } else {
                 titleInput.value = "";
-                fetchMediaList(); // Refresh lists
+                flagInput.value = "";
+                ratingInput.value = "";
+                fetchMediaList();
             }
         }
 
-        // Progress item through cycle states
         async function moveNext(id, currentStatus, type) {
             let nextStatus = 'watched';
             if (currentStatus === 'watchlist' && type === 'serial') {
@@ -258,8 +362,13 @@
             }
         }
 
-        // Delete completely from the table
         async function deleteMedia(id) {
+            const currentItem = localWatchlistCache.find(item => item.id === id);
+            const titleDisplay = currentItem ? (currentItem.Title || currentItem.title) : "this item";
+            
+            const confirmation = confirm(`U sure??? Do you really want to delete "${titleDisplay}"?`);
+            if (!confirmation) return;
+
             const { error } = await db
                 .from('Watchlist')
                 .delete()
@@ -272,7 +381,59 @@
             }
         }
 
-        // Sort items out into their correct HTML lists
+        function surpriseMeMovie() {
+            const movieWatchlist = localWatchlistCache.filter(item => {
+                const itemType = item.Type || item.type;
+                const itemStatus = item.Status || item.status;
+                return itemType === 'movie' && itemStatus === 'watchlist';
+            });
+
+            if (movieWatchlist.length === 0) {
+                alert("Your Movie Watchlist is completely empty! Add some movies first.");
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * movieWatchlist.length);
+            const luckyMovie = movieWatchlist[randomIndex];
+            alert(`🍿 Surprise! Tonight you are watching: "${luckyMovie.Title || luckyMovie.title}"`);
+        }
+
+        // Live Processing of Dashboard Metrics and Recommendations
+        function calculateAnalytics(items) {
+            let coreCount = 0;
+            let highestRatedTitle = "";
+            let highestRatedType = "";
+
+            items.forEach(item => {
+                const flag = item.Flag || item.flag;
+                const rating = item.Rating || item.rating;
+                const title = item.Title || item.title;
+                const type = item.Type || item.type;
+
+                if (flag === 'masterpiece' || flag === 'rewatched') coreCount++;
+                if (rating === '5') {
+                    highestRatedTitle = title;
+                    highestRatedType = type;
+                }
+            });
+
+            document.getElementById('stat-masterpieces').innerText = coreCount;
+
+            // Simple recommendation generator based on your high-tier logs
+            const recBox = document.getElementById('rec-box');
+            if (highestRatedTitle) {
+                if (highestRatedTitle.toLowerCase().includes("criminal justice")) {
+                    recBox.innerHTML = `💡 Since you loved <b>${highestRatedTitle}</b>, try episodic crime thrillers like <i>Paatal Lok</i> or <i>Delhi Crime</i>!`;
+                } else if (highestRatedTitle.toLowerCase().includes("mare of easttown")) {
+                    recBox.innerHTML = `💡 Since you loved <b>${highestRatedTitle}</b>, dive into self-contained gritty procedural cases like <i>Broadchurch</i> or <i>The Sinner</i>!`;
+                } else {
+                    recBox.innerHTML = `💡 Based on your love for <b>${highestRatedTitle}</b>, look for premium trending entries in the matching ${highestRatedType === 'movie' ? 'Cinematic' : 'TV Show'} space!`;
+                }
+            } else {
+                recBox.innerText = "Log a 5-star Masterpiece to trigger recommendation mapping!";
+            }
+        }
+
         function displayList(items) {
             const lists = {
                 'movie-watchlist': document.getElementById('movie-watchlist'),
@@ -282,45 +443,52 @@
                 'serial-watched': document.getElementById('serial-watched')
             };
 
-            // Clear old HTML states completely
             Object.values(lists).forEach(list => list.innerHTML = "");
-
-            // Track how many items hit each bucket to handle fallback text
             const counts = { 'movie-watchlist': 0, 'movie-watched': 0, 'serial-watching': 0, 'serial-watchlist': 0, 'serial-watched': 0 };
 
             items.forEach(item => {
                 const itemTitle = item.Title || item.title;
                 const itemType = item.Type || item.type;
                 const itemStatus = item.Status || item.status;
+                const itemFlag = item.Flag || item.flag;
+                const itemRating = item.Rating || item.rating;
 
                 const listKey = `${itemType}-${itemStatus}`;
                 if (lists[listKey]) {
                     counts[listKey]++;
-                    
                     const li = document.createElement('li');
                     
+                    // Render interactive Flags & Stars
+                    let flagHtml = '';
+                    if (itemFlag === 'masterpiece') flagHtml = `<span class="badge badge-masterpiece">👑 Masterpiece</span>`;
+                    if (itemFlag === 'dropped') flagHtml = `<span class="badge badge-dropped">❌ Dropped</span>`;
+                    if (itemFlag === 'rewatched') flagHtml = `<span class="badge badge-rewatched">🔄 Rewatched</span>`;
+
+                    let starsHtml = '';
+                    if (itemRating) {
+                        starsHtml = `<span class="stars">${'⭐'.repeat(parseInt(itemRating))}</span>`;
+                    }
+
                     let actionButtons = '';
-                    
-                    // Add state progression button if not completed
                     if (itemStatus !== 'watched') {
                         let label = itemStatus === 'watchlist' && itemType === 'serial' ? 'Start 👀' : 'Done ✅';
                         actionButtons += `<button class="btn-action btn-next" onclick="moveNext(${item.id}, '${itemStatus}', '${itemType}')">${label}</button>`;
                     }
-                    
-                    // Only attach the remove button if it's explicitly in a watchlist bucket
-                    if (itemStatus === 'watchlist') {
-                        actionButtons += `<button class="btn-action btn-delete" onclick="deleteMedia(${item.id})">Remove 🗑️</button>`;
-                    }
+                    actionButtons += `<button class="btn-action btn-delete" onclick="deleteMedia(${item.id})">Remove 🗑️</button>`;
 
                     li.innerHTML = `
-                        <span class="item-text">${itemTitle}</span>
+                        <div class="item-text">
+                            <div class="item-main">
+                                <b>${itemTitle}</b> ${flagHtml}
+                            </div>
+                            ${starsHtml}
+                        </div>
                         <div class="actions">${actionButtons}</div>
                     `;
                     lists[listKey].appendChild(li);
                 }
             });
 
-            // Set empty messages if sections have no logged titles
             Object.keys(lists).forEach(key => {
                 if (counts[key] === 0) {
                     lists[key].innerHTML = `<div class="empty-msg">No titles logged.</div>`;
