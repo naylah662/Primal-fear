@@ -128,11 +128,11 @@
     <h1>Primal fear</h1>
 
     <div class="input-area">
-        <input type="text" id="mediaTitle" placeholder="Enter movie or serial title...">
+        <input type="text" id="mediaTitle" placeholder="Enter movie or show title...">
         <div class="row">
             <select id="mediaType" onchange="updateStatusOptions()">
                 <option value="movie">🎬 Movie</option>
-                <option value="serial">📺 Serial</option>
+                <option value="serial">📺 TV Show</option>
             </select>
             <select id="mediaStatus">
                 <option value="watchlist">⏳ Want to Watch</option>
@@ -151,7 +151,7 @@
         <ul id="movie-watched"></ul>
     </div>
 
-    <h2>📺 Serials & Shows</h2>
+    <h2>📺 TV Shows</h2>
     <div class="category-block">
         <h3>👀 Currently Watching</h3>
         <ul id="serial-watching"></ul>
@@ -194,7 +194,7 @@
             }
         }
 
-        // Pull saved data array from cloud - using capital 'Watchlist'
+        // Pull saved data array from cloud
         async function fetchMediaList() {
             let { data: watchlist, error } = await db
                 .from('Watchlist')
@@ -207,7 +207,7 @@
             }
         }
 
-        // Add item to cloud using capitalized keys to match your Supabase columns
+        // Add item to cloud
         async function addMedia() {
             const titleInput = document.getElementById('mediaTitle');
             const typeInput = document.getElementById('mediaType');
@@ -285,7 +285,6 @@
             const counts = { 'movie-watchlist': 0, 'movie-watched': 0, 'serial-watching': 0, 'serial-watchlist': 0, 'serial-watched': 0 };
 
             items.forEach(item => {
-                // Reading data from database using capitalized keys
                 const itemTitle = item.Title || item.title;
                 const itemType = item.Type || item.type;
                 const itemStatus = item.Status || item.status;
@@ -297,11 +296,17 @@
                     const li = document.createElement('li');
                     
                     let actionButtons = '';
+                    
+                    // Add state progression button if not completed
                     if (itemStatus !== 'watched') {
                         let label = itemStatus === 'watchlist' && itemType === 'serial' ? 'Start 👀' : 'Done ✅';
                         actionButtons += `<button class="btn-action btn-next" onclick="moveNext(${item.id}, '${itemStatus}', '${itemType}')">${label}</button>`;
                     }
-                    actionButtons += `<button class="btn-action btn-delete" onclick="deleteMedia(${item.id})">Remove 🗑️</button>`;
+                    
+                    // CRITICAL CHANGE: Only attach the remove button if it's explicitly in a watchlist bucket
+                    if (itemStatus === 'watchlist') {
+                        actionButtons += `<button class="btn-action btn-delete" onclick="deleteMedia(${item.id})">Remove 🗑️</button>`;
+                    }
 
                     li.innerHTML = `
                         <span class="item-text">${itemTitle}</span>
