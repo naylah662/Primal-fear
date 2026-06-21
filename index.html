@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Primal fear</title>
-    <!-- We are loading the Supabase cloud script here -->
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -43,8 +45,13 @@
             border: none;
             font-size: 1rem;
         }
-        input { background-color: #333; color: white; }
-        select { background-color: #333; color: white; }
+        input, select {
+            background-color: #333333;
+            color: #ffffff;
+        }
+        input::placeholder {
+            color: #888888;
+        }
         button {
             background-color: #ff4a5a;
             color: white;
@@ -52,58 +59,76 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        button:hover { background-color: #e03e4d; }
-        .category-block {
-            background-color: #1f1f1f;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border-left: 4px solid #ff4a5a;
+        button:hover {
+            background-color: #e03e4d;
         }
-        .category-title {
-            color: #fff;
-            margin-top: 0;
-            font-size: 1.5rem;
-            border-bottom: 1px solid #333;
-            padding-bottom: 8px;
+        .category-block {
+            margin-bottom: 35px;
+        }
+        h2 {
+            color: #ff4a5a;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff4a5a;
+            padding-left: 10px;
         }
         h3 {
-            color: #aaa;
-            font-size: 1rem;
-            margin-top: 20px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #aaaaaa;
+            font-size: 1.1rem;
+            margin: 20px 0 10px 0;
         }
-        ul { list-style-type: none; padding: 0; margin: 0; }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
         li {
-            background-color: #2a2a2a;
-            margin: 6px 0;
-            padding: 10px 14px;
-            border-radius: 5px;
+            background-color: #262626;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .action-btns { display: flex; align-items: center; gap: 12px; }
-        .move-btn {
-            background-color: #333;
-            color: #ff4a5a;
-            padding: 4px 10px;
+        .item-text {
+            font-weight: 500;
+        }
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-action {
+            padding: 6px 12px;
             font-size: 0.85rem;
             border-radius: 4px;
         }
-        .move-btn:hover { background-color: #ff4a5a; color: white; }
-        .delete-btn { background: none; color: #666; padding: 0 5px; font-size: 0.9em; }
-        .delete-btn:hover { color: #ff4a5a; background: none; }
+        .btn-next {
+            background-color: #34c759;
+        }
+        .btn-next:hover {
+            background-color: #28a745;
+        }
+        .btn-delete {
+            background-color: #555555;
+        }
+        .btn-delete:hover {
+            background-color: #444444;
+        }
+        .empty-msg {
+            color: #666666;
+            font-style: italic;
+            padding-left: 10px;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🎬 Primal fear</h1>
-    
+    <h1>Primal fear</h1>
+
     <div class="input-area">
-        <input type="text" id="mediaTitle" placeholder="Type name here...">
+        <input type="text" id="mediaTitle" placeholder="Enter movie or serial title...">
         <div class="row">
             <select id="mediaType" onchange="updateStatusOptions()">
                 <option value="movie">🎬 Movie</option>
@@ -117,43 +142,44 @@
         <button onclick="addMedia()">Add to Log</button>
     </div>
 
-    <!-- MOVIES SECTION -->
+    <h2>🎬 Movies</h2>
     <div class="category-block">
-        <h2 class="category-title">🎬 Movies</h2>
         <h3>⏳ Watchlist</h3>
         <ul id="movie-watchlist"></ul>
+        
         <h3>✅ Watched & Completed</h3>
         <ul id="movie-watched"></ul>
     </div>
 
-    <!-- SERIALS SECTION -->
+    <h2>📺 Serials & Shows</h2>
     <div class="category-block">
-        <h2 class="category-title">📺 Serials & TV Shows</h2>
-        <h3>🍿 Currently Watching</h3>
+        <h3>👀 Currently Watching</h3>
         <ul id="serial-watching"></ul>
+
         <h3>⏳ Watchlist</h3>
         <ul id="serial-watchlist"></ul>
+        
         <h3>✅ Watched & Completed</h3>
         <ul id="serial-watched"></ul>
     </div>
 
     <script>
-        // =========================================================
-        // STEP 2.1: LINK YOUR DATABASE HERE!
-        // Replace the placeholders below with your actual keys from Supabase
-        // =========================================================
+        // ==========================================
+        // CONNECT TO YOUR SUPABASE CLOUD DATABASE
+        // ==========================================
         const SUPABASE_URL = "https://liqqdromclsdhlgpasao.supabase.co";
         const SUPABASE_KEY = "sb_publishable_2l0Bfembiw0shrvgih64hw_DsvjbkdD";
         
-        // Connect our code to the Supabase library
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Load the list directly from the internet cloud when opened
+        // Fetch data immediately when the app loads
         fetchMediaList();
 
+        // Adjust dropdown selection modes instantly based on Movie vs Serial
         function updateStatusOptions() {
             const type = document.getElementById('mediaType').value;
             const statusDropdown = document.getElementById('mediaStatus');
+            
             if (type === 'movie') {
                 statusDropdown.innerHTML = `
                     <option value="watchlist">⏳ Want to Watch</option>
@@ -161,27 +187,27 @@
                 `;
             } else {
                 statusDropdown.innerHTML = `
-                    <option value="watching">🍿 Currently Watching</option>
+                    <option value="watching">👀 Currently Watching</option>
                     <option value="watchlist">⏳ Want to Watch</option>
                     <option value="watched">✅ Watched & Completed</option>
                 `;
             }
         }
 
-        // Fetch the active data array from the cloud database
+        // Pull saved data array from cloud - using capital 'Watchlist'
         async function fetchMediaList() {
-            let { data: watchlist, error } = await supabase
-                .from('watchlist')
+            let { data: watchlist, error } = await db
+                .from('Watchlist')
                 .select('*');
 
             if (error) {
-                console.error("Error loading data:", error);
+                console.error("Error loading cloud data:", error);
             } else {
                 displayList(watchlist || []);
             }
         }
 
-        // Add item to cloud
+        // Add item to cloud using capitalized keys to match your Supabase columns
         async function addMedia() {
             const titleInput = document.getElementById('mediaTitle');
             const typeInput = document.getElementById('mediaType');
@@ -192,80 +218,103 @@
                 return;
             }
 
-            const { error } = await supabase
-                .from('watchlist')
+            const { error } = await db
+                .from('Watchlist')
                 .insert([
-                    { title: titleInput.value, type: typeInput.value, status: statusInput.value }
+                    { Title: titleInput.value.trim(), Type: typeInput.value, Status: statusInput.value }
                 ]);
 
             if (error) {
                 alert("Error adding item to cloud.");
+                console.error(error);
             } else {
                 titleInput.value = "";
-                fetchMediaList(); // Refresh data from cloud
+                fetchMediaList(); // Refresh lists
             }
         }
 
-        // Advance item status on the cloud
+        // Progress item through cycle states
         async function moveNext(id, currentStatus, type) {
             let nextStatus = 'watched';
             if (currentStatus === 'watchlist' && type === 'serial') {
                 nextStatus = 'watching';
+            } else if (currentStatus === 'watching') {
+                nextStatus = 'watched';
             }
 
-            const { error } = await supabase
-                .from('watchlist')
-                .update({ status: nextStatus })
+            const { error } = await db
+                .from('Watchlist')
+                .update({ Status: nextStatus })
                 .eq('id', id);
 
             if (error) {
-                alert("Error updating item.");
+                console.error("Error moving item status:", error);
             } else {
                 fetchMediaList();
             }
         }
 
-        // Remove item from cloud
+        // Delete completely from the table
         async function deleteMedia(id) {
-            const { error } = await supabase
-                .from('watchlist')
+            const { error } = await db
+                .from('Watchlist')
                 .delete()
                 .eq('id', id);
 
             if (error) {
-                alert("Error deleting item.");
+                console.error("Error deleting item:", error);
             } else {
                 fetchMediaList();
             }
         }
 
-        function displayList(mediaList) {
-            document.getElementById('movie-watchlist').innerHTML = "";
-            document.getElementById('movie-watched').innerHTML = "";
-            document.getElementById('serial-watching').innerHTML = "";
-            document.getElementById('serial-watchlist').innerHTML = "";
-            document.getElementById('serial-watched').innerHTML = "";
+        // Sort items out into their correct HTML lists
+        function displayList(items) {
+            const lists = {
+                'movie-watchlist': document.getElementById('movie-watchlist'),
+                'movie-watched': document.getElementById('movie-watched'),
+                'serial-watching': document.getElementById('serial-watching'),
+                'serial-watchlist': document.getElementById('serial-watchlist'),
+                'serial-watched': document.getElementById('serial-watched')
+            };
 
-            mediaList.forEach(item => {
-                const li = document.createElement('li');
-                let moveButtonHtml = '';
-                if (item.status !== 'watched') {
-                    let nextLabel = item.status === 'watchlist' && item.type === 'serial' ? 'Start Watching →' : 'Completed →';
-                    moveButtonHtml = `<button class="move-btn" onclick="moveNext(${item.id}, '${item.status}', '${item.type}')">${nextLabel}</button>`;
+            // Clear old HTML states completely
+            Object.values(lists).forEach(list => list.innerHTML = "");
+
+            // Track how many items hit each bucket to handle fallback text
+            const counts = { 'movie-watchlist': 0, 'movie-watched': 0, 'serial-watching': 0, 'serial-watchlist': 0, 'serial-watched': 0 };
+
+            items.forEach(item => {
+                // Reading data from database using capitalized keys
+                const itemTitle = item.Title || item.title;
+                const itemType = item.Type || item.type;
+                const itemStatus = item.Status || item.status;
+
+                const listKey = `${itemType}-${itemStatus}`;
+                if (lists[listKey]) {
+                    counts[listKey]++;
+                    
+                    const li = document.createElement('li');
+                    
+                    let actionButtons = '';
+                    if (itemStatus !== 'watched') {
+                        let label = itemStatus === 'watchlist' && itemType === 'serial' ? 'Start 👀' : 'Done ✅';
+                        actionButtons += `<button class="btn-action btn-next" onclick="moveNext(${item.id}, '${itemStatus}', '${itemType}')">${label}</button>`;
+                    }
+                    actionButtons += `<button class="btn-action btn-delete" onclick="deleteMedia(${item.id})">Remove 🗑️</button>`;
+
+                    li.innerHTML = `
+                        <span class="item-text">${itemTitle}</span>
+                        <div class="actions">${actionButtons}</div>
+                    `;
+                    lists[listKey].appendChild(li);
                 }
+            });
 
-                li.innerHTML = `
-                    <span><strong>${item.title}</strong></span>
-                    <div class="action-btns">
-                        ${moveButtonHtml}
-                        <button class="delete-btn" onclick="deleteMedia(${item.id})">✕</button>
-                    </div>
-                `;
-                
-                const listId = `${item.type}-${item.status}`;
-                const targetList = document.getElementById(listId);
-                if (targetList) {
-                    targetList.appendChild(li);
+            // Set empty messages if sections have no logged titles
+            Object.keys(lists).forEach(key => {
+                if (counts[key] === 0) {
+                    lists[key].innerHTML = `<div class="empty-msg">No titles logged.</div>`;
                 }
             });
         }
