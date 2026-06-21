@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Primal fear</title>
+    <title>Primal Fear</title>
     
+    <!-- Load the official Supabase library correctly -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -125,8 +126,10 @@
 </head>
 <body>
 
-    <h1>Primal fear</h1>
+    <!-- Header updated to exact casing -->
+    <h1>Primal Fear</h1>
 
+    <!-- Inputs to log a new show -->
     <div class="input-area">
         <input type="text" id="mediaTitle" placeholder="Enter movie or show title...">
         <div class="row">
@@ -142,6 +145,7 @@
         <button onclick="addMedia()">Add to Log</button>
     </div>
 
+    <!-- Container for displaying columns -->
     <h2>🎬 Movies</h2>
     <div class="category-block">
         <h3>⏳ Watchlist</h3>
@@ -303,7 +307,7 @@
                         actionButtons += `<button class="btn-action btn-next" onclick="moveNext(${item.id}, '${itemStatus}', '${itemType}')">${label}</button>`;
                     }
                     
-                    // CRITICAL CHANGE: Only attach the remove button if it's explicitly in a watchlist bucket
+                    // Only attach the remove button if it's explicitly in a watchlist bucket
                     if (itemStatus === 'watchlist') {
                         actionButtons += `<button class="btn-action btn-delete" onclick="deleteMedia(${item.id})">Remove 🗑️</button>`;
                     }
